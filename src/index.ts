@@ -30,21 +30,64 @@ app.use("/", router);
 
 io.on("connection", socket => {
   socket.on("chat message", msg => {
-    console.log("message: " + msg);
     io.emit("chat message", msg);
   });
 
-  // socket.on("room", room => {
-  //   socket.join(room);
-  //   io.to(room).emit("chat message", `${room.split("-")[0]} has joined the ${room} room`);
-  // })
+  socket.on("room", (room, wallet) => {
+    if (io.sockets.adapter.rooms.get(room)!) {
+      const arr = Array.from(io.sockets.adapter.rooms.get(room)!.keys()).filter(
+        id => id.length <= 12,
+      );
 
-  // socket.on("room message", (room, msg) => {
-  //   io.to(room).emit("chat message", msg);
-  // })
+      if (arr.length > 2) {
+        return socket.emit("chat message", "Room is full");
+      }
+    }
+
+    socket.join(room);
+    // setar a wallet do usuário na room
+    io.sockets.adapter.rooms.get(room)!.add(wallet);
+
+    io.to(room).emit("chat message", `${wallet} has joined the ${room} room`);
+  });
+
+  socket.on("get rooms", () => {
+    // retornar todas as rooms
+    const rooms = io.sockets.adapter.rooms;
+    const roomsArray = Array.from(rooms.keys());
+
+    socket.emit("get rooms", roomsArray);
+  });
+
+  socket.on("get room users", rooms => {
+    const roomsUsers = rooms.map((room: any) => {
+      const data = Array.from(io.sockets.adapter.rooms.get(room)!.keys());
+
+      const ids = data.filter(id => id.length > 12);
+      const users = data.filter(id => id.length <= 12);
+      return { room, ids, users };
+    });
+
+    socket.emit("get room users", roomsUsers);
+  });
+
+  socket.on("room message", (room, msg) => {
+    if (io.sockets.adapter.rooms.get(room)!) {
+      const arr = Array.from(io.sockets.adapter.rooms.get(room)!.keys()).filter(
+        id => id.length <= 12,
+      );
+
+      if (arr.length > 2) {
+        return socket.emit("chat message", "Room is full");
+      }
+    }
+
+
+    io.to(room).emit("chat message", msg);
+  });
 
   socket.on("disconnect", () => {
-    io.emit("chat message", `${socket.id} has left the chat`);
+   // io.emit("chat message", `${socket.id} has left the chat`);
   });
 
   socket.on("typing", msg => {
