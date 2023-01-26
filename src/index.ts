@@ -48,6 +48,7 @@ io.on("connection", socket => {
     // setar a wallet do usuário na room
     io.sockets.adapter.rooms.get(room)!.add(wallet);
 
+    socket.emit("get room")
     io.to(room).emit("chat message", `${wallet} has joined the ${room} room`);
   });
 
