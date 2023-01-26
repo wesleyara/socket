@@ -40,6 +40,7 @@ io.on("connection", socket => {
       );
 
       if (arr.length > 2) {
+        socket.emit("get room");
         return socket.emit("chat message", "Room is full");
       }
     }
@@ -90,7 +91,7 @@ io.on("connection", socket => {
     socket.leave(room);
     socket.emit("get room");
     io.to(room).emit("chat message", `${socket.id} has left the ${room} room`);
-  })
+  });
 
   socket.on("disconnect", () => {
     // io.emit("chat message", `${socket.id} has left the chat`);
