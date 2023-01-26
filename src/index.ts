@@ -1,7 +1,7 @@
 import express from "express";
 import http from "http";
 import cors from "cors";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 
 const app = express();
 const server = http.createServer(app);
@@ -15,6 +15,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import router from "./routes";
+import { DefaultEventsMap } from "socket.io/dist/typed-events";
 
 const PORT = process.env.PORT || 3333;
 
@@ -28,28 +29,38 @@ app.use(express.json());
 // app.use(express.static("public"));
 app.use("/", router);
 
-io.on("connection", socket => {
+interface WalletSocket
+  extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> {
+  wallet?: string;
+}
+
+io.on("connection", (socket: WalletSocket) => {
   socket.on("chat message", msg => {
     io.emit("chat message", msg);
   });
 
+  socket.on("set wallet", function (name) {
+    socket.wallet = name;
+  });
+
   socket.on("room", (room, wallet) => {
+    // console.log(socket.wallet);
+    socket.emit("get room");
     if (io.sockets.adapter.rooms.get(room)!) {
       const arr = Array.from(io.sockets.adapter.rooms.get(room)!.keys()).filter(
         id => id.length <= 12,
       );
 
       if (arr.length >= 2) {
-        socket.emit("get room");
+        io.emit("get room");
         return socket.emit("chat message", "Room is full");
       }
     }
 
     socket.join(room);
     // setar a wallet do usuário na room
+    io.emit("get room");
     io.sockets.adapter.rooms.get(room)!.add(wallet);
-
-    socket.emit("get room");
     io.to(room).emit("chat message", `${wallet} has joined the ${room} room`);
   });
 
@@ -58,7 +69,7 @@ io.on("connection", socket => {
     const rooms = io.sockets.adapter.rooms;
     const roomsArray = Array.from(rooms.keys());
 
-    socket.emit("get rooms", roomsArray);
+    io.emit("get rooms", roomsArray);
   });
 
   socket.on("get room users", rooms => {
@@ -70,7 +81,14 @@ io.on("connection", socket => {
       return { room, ids, users };
     });
 
-    socket.emit("get room users", roomsUsers);
+    io.emit("get room users", roomsUsers);
+  });
+
+  socket.on("conect room", (room, wallet) => {
+    socket.join(room);
+    // setar a wallet do usuário na room
+    io.sockets.adapter.rooms.get(room)!.add(wallet);
+    io.to(room).emit("chat message", `${wallet} has joined the ${room} room`);
   });
 
   socket.on("room message", (room, msg) => {
@@ -87,16 +105,21 @@ io.on("connection", socket => {
     io.to(room).emit("chat message", msg);
   });
 
-  socket.on("leave room", (room, wallet) => {
-    // remover a wallet do usuário na room
-    io.sockets.adapter.rooms.get(room)!.delete(wallet);
-    socket.leave(room);
-    socket.emit("get room");
-    io.to(room).emit("chat message", `${socket.id} has left the ${room} room`);
-  });
-
   socket.on("disconnect", () => {
-    // io.emit("chat message", `${socket.id} has left the chat`);
+    const rooms = io.sockets.adapter.rooms;
+    const roomsArray = Array.from(rooms.keys());
+
+    roomsArray.forEach(room => {
+      if (io.sockets.adapter.rooms.get(room)!) {
+        socket.wallet &&
+          io.sockets.adapter.rooms.get(room)!.delete(socket.wallet);
+
+        io.sockets.adapter.rooms.get(room)!.delete(socket.id);
+      }
+    });
+
+    io.emit("get room");
+    io.emit("chat message", `${socket.id} has left the room`);
   });
 
   socket.on("typing", msg => {
