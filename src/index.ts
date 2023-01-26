@@ -87,7 +87,9 @@ io.on("connection", socket => {
     io.to(room).emit("chat message", msg);
   });
 
-  socket.on("leave room", room => {
+  socket.on("leave room", (room, wallet) => {
+    // remover a wallet do usuário na room
+    io.sockets.adapter.rooms.get(room)!.delete(wallet);
     socket.leave(room);
     socket.emit("get room");
     io.to(room).emit("chat message", `${socket.id} has left the ${room} room`);
