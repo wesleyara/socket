@@ -39,7 +39,7 @@ io.on("connection", socket => {
         id => id.length <= 12,
       );
 
-      if (arr.length > 2) {
+      if (arr.length >= 2) {
         socket.emit("get room");
         return socket.emit("chat message", "Room is full");
       }
