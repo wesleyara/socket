@@ -5,7 +5,7 @@ const basepath = path.join(__dirname, "../../public/index.html");
 const router = express.Router();
 
 router.get("/", (req, res) => {
-  res.sendFile(basepath);
+  res.json({ message: "Hello World!" });
 });
 
 export default router;
