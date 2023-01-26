@@ -118,8 +118,8 @@ io.on("connection", (socket: WalletSocket) => {
       }
     });
 
-    io.emit("get room");
-    io.emit("chat message", `${socket.id} has left the room`);
+    io.emit("chat message", `${socket.wallet} has left the room`);
+    io.emit("get rooms");
   });
 
   socket.on("typing", msg => {
