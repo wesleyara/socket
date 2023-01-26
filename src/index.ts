@@ -48,7 +48,7 @@ io.on("connection", socket => {
     // setar a wallet do usuário na room
     io.sockets.adapter.rooms.get(room)!.add(wallet);
 
-    socket.emit("get room")
+    socket.emit("get room");
     io.to(room).emit("chat message", `${wallet} has joined the ${room} room`);
   });
 
@@ -83,12 +83,17 @@ io.on("connection", socket => {
       }
     }
 
-
     io.to(room).emit("chat message", msg);
   });
 
+  socket.on("leave room", room => {
+    socket.leave(room);
+    socket.emit("get room");
+    io.to(room).emit("chat message", `${socket.id} has left the ${room} room`);
+  })
+
   socket.on("disconnect", () => {
-   // io.emit("chat message", `${socket.id} has left the chat`);
+    // io.emit("chat message", `${socket.id} has left the chat`);
   });
 
   socket.on("typing", msg => {
